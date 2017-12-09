@@ -1,0 +1,10 @@
+opam-version: "1.2"
+name: "gbomb"
+version: "0.1.0"
+maintainer: "Matt Stobo <mwstobo@gmail.com>"
+author: "Matt Stobo <mwstobo@gmail.com>"
+homepage: "https://github.com/mwstobo/gbomb"
+bug-reports: "https://github.com/mwstobo/gbomb"
+license: "MIT"
+dev-repo: "https://github.com/mwstobo/gbomb"
+build: [make]

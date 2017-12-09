@@ -1,0 +1,6 @@
+(jbuild_version 1)
+
+(library
+ ((name      giantbomb)
+  (synopsis  "Interface for the Giantbomb API")
+  (libraries (lwt cohttp cohttp-lwt-unix yojson))))
