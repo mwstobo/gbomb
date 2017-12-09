@@ -12,7 +12,7 @@ You can get an API key [here](https://www.giantbomb.com/api/).
 ```shell
 # Prints the URL where you can download a video
 # Intended to actually download the video at some point
-$ gbomb download --video-id VIDEO_ID --quality [low|high|hd]
+$ gbomb download --quality [low|high|hd] VIDEO_ID
 ```
 
 ## TODO
