@@ -6,7 +6,7 @@ let create_download opts =
   match opts with
   | [(Cli.Arg id); (Cli.Flag ("quality", qual))]
   | [(Cli.Flag ("quality", qual)); (Cli.Arg id)] ->
-      Download (id, qual)
+      Download (id, qual ^ "_url")
   | _ -> Invalid
 
 
