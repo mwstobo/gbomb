@@ -7,6 +7,7 @@ let create_download opts =
   | [(Cli.Arg id); (Cli.Flag ("quality", qual))]
   | [(Cli.Flag ("quality", qual)); (Cli.Arg id)] ->
       Download (id, qual ^ "_url")
+  | [(Cli.Arg id)] -> Download (id, "high_url")
   | _ -> Invalid
 
 
