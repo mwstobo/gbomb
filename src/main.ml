@@ -1,5 +1,7 @@
 type action = Invalid | Download of string * string
 
+let ( >>= ) = Lwt.( >>= )
+
 let create_download opts =
   match opts with
   | [(Cli.Arg id); (Cli.Flag ("quality", qual))]
@@ -12,14 +14,6 @@ let get_action opts =
   match opts with
   | (Cli.Arg "download") :: opts -> create_download opts
   | _ -> Invalid
-
-
-let download_video api_key video_id quality =
-  let video = Lwt_main.run (Giantbomb.Resource.get_video api_key video_id) in
-  let high_url_field = Giantbomb.Resource.field quality video in
-  match Giantbomb.Field.to_string_opt high_url_field with
-  | Some s -> print_endline s
-  | _ -> print_endline "Not found!"
 
 
 let get_api_key =
@@ -38,6 +32,36 @@ let get_api_key =
         else None
 
 
+let rec save_stream st oc =
+  Lwt_stream.get st
+  >>= fun part_opt ->
+  match part_opt with
+  | None -> close_out oc ; Lwt.return (print_endline "Done!")
+  | Some part -> output_string oc part ; save_stream st oc
+
+
+let download_video api_key video_id quality =
+  Giantbomb.Resource.get_video api_key video_id
+  >>= fun video ->
+  let url_opt =
+    Giantbomb.Resource.field quality video |> Giantbomb.Field.to_string_opt
+  in
+  let filename_opt =
+    Giantbomb.Resource.field "url" video |> Giantbomb.Field.to_string_opt
+  in
+  match (url_opt, filename_opt) with
+  | Some url, Some filename ->
+      let download_url = url ^ "?api_key=" ^ api_key in
+      let ua = Cohttp.Header.user_agent in
+      let headers = Cohttp.Header.init_with "User-Agent" ua in
+      Cohttp_lwt_unix.Client.get ~headers (Uri.of_string download_url)
+      >>= fun (_, body) ->
+      let oc = open_out filename in
+      print_endline ("Starting download of " ^ filename) ;
+      save_stream (Cohttp_lwt.Body.to_stream body) oc
+  | _ -> Lwt.return (print_endline "Not found!")
+
+
 let () =
   let args = Array.sub Sys.argv 1 (Array.length Sys.argv - 1) in
   let opts = Cli.parse_options (Array.to_list args) in
@@ -47,5 +71,6 @@ let () =
   | Some api_key ->
       let action = get_action opts in
       match action with
-      | Download (video_id, quality) -> download_video api_key video_id quality
+      | Download (video_id, quality) ->
+          Lwt_main.run (download_video api_key video_id quality)
       | _ -> print_endline "Invalid action!"
