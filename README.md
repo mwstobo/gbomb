@@ -1,5 +1,5 @@
 # gbomb
-Giantbomb command line client, written in OCaml
+Giant Bomb command line client, written in OCaml
 
 ## API Keys
 To use this tool, you must provide your own API key. It can be stored in two places:
@@ -8,7 +8,7 @@ To use this tool, you must provide your own API key. It can be stored in two pla
 
 You can get an API key [here](https://www.giantbomb.com/api/).
 
-Note that you must have a Giantbomb premium subscription to download videos. Otherwise, you might get a *sinister error*.
+Note that you must have a Giant Bomb premium subscription to download videos. Otherwise, you might get a *sinister error*.
 
 ## Usage
 ```shell
