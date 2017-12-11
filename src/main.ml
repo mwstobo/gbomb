@@ -42,16 +42,10 @@ let rec save_stream st oc =
 
 
 let download_video api_key video_id quality =
-  Giantbomb.Resource.get_video api_key video_id
+  Giantbomb.Client.get_video api_key video_id
   >>= fun video ->
-  let url_opt =
-    Giantbomb.Resource.field quality video |> Giantbomb.Field.to_string_opt
-  in
-  let filename_opt =
-    Giantbomb.Resource.field "url" video |> Giantbomb.Field.to_string_opt
-  in
-  match (url_opt, filename_opt) with
-  | Some url, Some filename ->
+  match video |> Giantbomb.Resource.get_fields_string [quality; "url"] with
+  | [(Some url); (Some filename); None] ->
       let download_url = url ^ "?api_key=" ^ api_key in
       let ua = Cohttp.Header.user_agent in
       let headers = Cohttp.Header.init_with "User-Agent" ua in

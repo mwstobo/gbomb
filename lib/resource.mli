@@ -1,5 +1,5 @@
 type t
 
-val field : string -> t -> Field.t
+val of_string : string -> t
 
-val get_video : string -> string -> t Lwt.t
+val get_fields_string : string list -> t -> string option list
