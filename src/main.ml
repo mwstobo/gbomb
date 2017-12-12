@@ -6,8 +6,8 @@ let create_download opts =
   match opts with
   | [(Cli.Arg id); (Cli.Flag ("quality", qual))]
   | [(Cli.Flag ("quality", qual)); (Cli.Arg id)] ->
-      Download (id, qual ^ "_url")
-  | [(Cli.Arg id)] -> Download (id, "high_url")
+      Download (id, qual)
+  | [(Cli.Arg id)] -> Download (id, "high")
   | _ -> Invalid
 
 
@@ -43,13 +43,20 @@ let rec save_stream st oc =
 
 let download_video api_key video_id quality =
   Giantbomb.Client.get_video api_key video_id
-  >>= fun video ->
-  match video |> Giantbomb.Resource.get_fields_string [quality; "url"] with
-  | [(Some url); (Some filename); None] ->
-      let download_url = url ^ "?api_key=" ^ api_key in
+  >>= fun video_opt ->
+  match video_opt with
+  | Some video ->
+      let url =
+        match quality with
+        | "high" -> video.Giantbomb.Types.high_url
+        | "hd" -> video.Giantbomb.Types.hd_url
+        | _ -> video.Giantbomb.Types.low_url
+      in
+      let filename = video.Giantbomb.Types.filename in
+      let authed_url = url ^ "?api_key=" ^ api_key in
       let ua = Cohttp.Header.user_agent in
       let headers = Cohttp.Header.init_with "User-Agent" ua in
-      Cohttp_lwt_unix.Client.get ~headers (Uri.of_string download_url)
+      Cohttp_lwt_unix.Client.get ~headers (Uri.of_string authed_url)
       >>= fun (_, body) ->
       let oc = open_out filename in
       print_endline ("Starting download of " ^ filename) ;

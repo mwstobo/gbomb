@@ -1,3 +1,5 @@
 _build
+gbomb.install
 *.byte
 *.native
+*.merlin
