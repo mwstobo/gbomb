@@ -14,8 +14,13 @@ Note that you must have a Giant Bomb premium subscription to download videos. Ot
 ```shell
 # Downloads a video at the specified quality
 $ gbomb download --quality [low|high|hd] VIDEO_ID
+
+# Prints the last the last n videos to stdout
+$ gbomb videos --limit n
 ```
 
 ## TODO
 - [x] Actually download the video when asked
-- [ ] Get a list of last `n` videos, filtering by show
+- [x] Get a list of last `n` videos, filtering by show
+- [ ] Add a show list command
+- [ ] Add show filtering to videos command

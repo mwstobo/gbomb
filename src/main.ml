@@ -1,4 +1,4 @@
-type action = Invalid | Download of string * string
+type action = Invalid | Download of string * string | Videos of int
 
 let ( >>= ) = Lwt.( >>= )
 
@@ -11,9 +11,20 @@ let create_download opts =
   | _ -> Invalid
 
 
+let create_videos opts =
+  match opts with
+  | [(Cli.Flag ("limit", limit_str))] -> (
+    match int_of_string_opt limit_str with
+    | Some limit -> Videos limit
+    | None -> Invalid )
+  | [] -> Videos 10
+  | _ -> Invalid
+
+
 let get_action opts =
   match opts with
   | (Cli.Arg "download") :: opts -> create_download opts
+  | (Cli.Arg "videos") :: opts -> create_videos opts
   | _ -> Invalid
 
 
@@ -64,6 +75,22 @@ let download_video api_key video_id quality =
   | _ -> Lwt.return (print_endline "Not found!")
 
 
+let rec print_videos video_opts =
+  match video_opts with
+  | [] -> ()
+  | None :: rest -> print_videos rest
+  | (Some video) :: rest ->
+      Format.printf "%s: %s\n" video.Giantbomb.Types.guid
+        video.Giantbomb.Types.name ;
+      print_videos rest
+
+
+let list_videos api_key limit =
+  let filters = Giantbomb.Types.{limit} in
+  Giantbomb.Client.get_videos ~filters api_key
+  >>= fun video_opts -> Lwt.return (print_videos video_opts)
+
+
 let () =
   let args = Array.sub Sys.argv 1 (Array.length Sys.argv - 1) in
   let opts = Cli.parse_options (Array.to_list args) in
@@ -75,4 +102,5 @@ let () =
       match action with
       | Download (video_id, quality) ->
           Lwt_main.run (download_video api_key video_id quality)
+      | Videos limit -> Lwt_main.run (list_videos api_key limit)
       | _ -> print_endline "Invalid action!"
