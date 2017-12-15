@@ -80,8 +80,12 @@ let rec print_videos video_opts =
   | [] -> ()
   | None :: rest -> print_videos rest
   | (Some video) :: rest ->
-      Format.printf "%s: %s\n" video.Giantbomb.Types.guid
-        video.Giantbomb.Types.name ;
+      let length = video.Giantbomb.Types.length in
+      let hours = length / 60 / 60 in
+      let minutes = (length / 60) mod 60 in
+      let seconds = length mod 60 in
+      Format.printf "%s: %s (%dh %dm %ds)\n" video.Giantbomb.Types.guid
+        video.Giantbomb.Types.name hours minutes seconds;
       print_videos rest
 
 

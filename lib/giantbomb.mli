@@ -5,7 +5,8 @@ module Types : sig
     ; filename: string
     ; low_url: string
     ; high_url: string
-    ; hd_url: string }
+    ; hd_url: string
+    ; length: int }
 
   type filters = {limit: int}
 end
