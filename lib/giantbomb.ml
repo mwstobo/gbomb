@@ -3,9 +3,9 @@ module Types = struct
     { name: string
     ; guid: string
     ; filename: string
-    ; low_url: string
-    ; high_url: string
-    ; hd_url: string
+    ; low_url: string option
+    ; high_url: string option
+    ; hd_url: string option
     ; length: int }
 
   type filters = {limit: int}
@@ -42,17 +42,15 @@ module Client = struct
     let hd_url_json = Yojson.Basic.Util.member "hd_url" video_json in
     let length_json = Yojson.Basic.Util.member "length_seconds" video_json in
     let string_fields =
-      Yojson.Basic.Util.filter_string
-        [ name_json
-        ; guid_json
-        ; filename_json
-        ; low_url_json
-        ; high_url_json
-        ; hd_url_json ]
+      Yojson.Basic.Util.filter_string [name_json; guid_json; filename_json]
     in
-    let int_fields =  Yojson.Basic.Util.filter_int [length_json] in
-    match (string_fields, int_fields) with
-    | [name; guid; filename; low_url; high_url; hd_url], [length] ->
+    let int_fields = Yojson.Basic.Util.filter_int [length_json] in
+    let option_fields =
+      List.map Yojson.Basic.Util.to_string_option
+        [low_url_json; high_url_json; hd_url_json]
+    in
+    match (string_fields, int_fields, option_fields) with
+    | [name; guid; filename], [length], [low_url; high_url; hd_url] ->
         Some Types.{name; guid; filename; low_url; high_url; hd_url; length}
     | _ -> None
 

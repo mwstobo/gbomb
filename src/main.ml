@@ -56,22 +56,25 @@ let download_video api_key video_id quality =
   Giantbomb.Client.get_video api_key video_id
   >>= fun video_opt ->
   match video_opt with
-  | Some video ->
-      let url =
+  | Some video -> (
+      let url_option =
         match quality with
         | "high" -> video.Giantbomb.Types.high_url
         | "hd" -> video.Giantbomb.Types.hd_url
         | _ -> video.Giantbomb.Types.low_url
       in
-      let filename = video.Giantbomb.Types.filename in
-      let authed_url = url ^ "?api_key=" ^ api_key in
-      let ua = Cohttp.Header.user_agent in
-      let headers = Cohttp.Header.init_with "User-Agent" ua in
-      Cohttp_lwt_unix.Client.get ~headers (Uri.of_string authed_url)
-      >>= fun (_, body) ->
-      let oc = open_out filename in
-      print_endline ("Starting download of " ^ filename) ;
-      save_stream (Cohttp_lwt.Body.to_stream body) oc
+      match url_option with
+      | Some url ->
+          let filename = video.Giantbomb.Types.filename in
+          let authed_url = url ^ "?api_key=" ^ api_key in
+          let ua = Cohttp.Header.user_agent in
+          let headers = Cohttp.Header.init_with "User-Agent" ua in
+          Cohttp_lwt_unix.Client.get ~headers (Uri.of_string authed_url)
+          >>= fun (_, body) ->
+          let oc = open_out filename in
+          print_endline ("Starting download of " ^ filename) ;
+          save_stream (Cohttp_lwt.Body.to_stream body) oc
+      | None -> Lwt.return (print_endline "Specified quality not found!") )
   | _ -> Lwt.return (print_endline "Not found!")
 
 
@@ -82,10 +85,10 @@ let rec print_videos video_opts =
   | (Some video) :: rest ->
       let length = video.Giantbomb.Types.length in
       let hours = length / 60 / 60 in
-      let minutes = (length / 60) mod 60 in
+      let minutes = length / 60 mod 60 in
       let seconds = length mod 60 in
       Format.printf "%s: %s (%dh %dm %ds)\n" video.Giantbomb.Types.guid
-        video.Giantbomb.Types.name hours minutes seconds;
+        video.Giantbomb.Types.name hours minutes seconds ;
       print_videos rest
 
 
