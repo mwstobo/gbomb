@@ -17,6 +17,8 @@ $ gbomb download --quality [low|high|hd] VIDEO_ID
 
 # Prints the last the last n videos to stdout
 $ gbomb videos --limit n
+# You can also use "list"
+$ gbomb list --limit n
 ```
 
 ## TODO

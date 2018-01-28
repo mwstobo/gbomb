@@ -24,7 +24,7 @@ let create_videos opts =
 let get_action opts =
   match opts with
   | (Cli.Arg "download") :: opts -> create_download opts
-  | (Cli.Arg "videos") :: opts -> create_videos opts
+  | (Cli.Arg "videos") :: opts | (Cli.Arg "list") :: opts -> create_videos opts
   | _ -> Invalid
 
 

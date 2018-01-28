@@ -3,4 +3,4 @@
 (library
  ((name      giantbomb)
   (synopsis  "Interface for the Giant Bomb API")
-  (libraries (lwt cohttp cohttp-lwt-unix yojson))))
+  (libraries (lwt lwt_ssl cohttp cohttp-lwt-unix yojson))))
