@@ -4,8 +4,8 @@ let ( >>= ) = Lwt.( >>= )
 
 let create_download opts =
   match opts with
-  | [(Cli.Arg id); (Cli.Flag ("quality", qual))]
-  | [(Cli.Flag ("quality", qual)); (Cli.Arg id)] ->
+  | [(Cli.Arg id); (Cli.Param ("quality", qual))]
+  | [(Cli.Param ("quality", qual)); (Cli.Arg id)] ->
       Download (id, qual)
   | [(Cli.Arg id)] -> Download (id, "high")
   | _ -> Invalid
@@ -13,7 +13,7 @@ let create_download opts =
 
 let create_videos opts =
   match opts with
-  | [(Cli.Flag ("limit", limit_str))] -> (
+  | [(Cli.Param ("limit", limit_str))] -> (
     match int_of_string_opt limit_str with
     | Some limit -> Videos limit
     | None -> Invalid )
