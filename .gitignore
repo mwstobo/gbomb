@@ -3,3 +3,4 @@ gbomb.install
 *.byte
 *.native
 *.merlin
+*.log

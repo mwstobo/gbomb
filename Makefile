@@ -1,10 +1,14 @@
+.PHONY: test
 JBUILD = jbuilder
 BIN = gbomb
 
-all: build
+all: build test
 
 clean:
 	$(JBUILD) clean
 
 build:
 	$(JBUILD) build
+
+test:
+	$(JBUILD) runtest
