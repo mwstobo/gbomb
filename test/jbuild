@@ -3,7 +3,7 @@
 (rule
  ((targets   (run_tests.ml))
   (deps      ((files_recursively_in ../lib)))
-  (action    (system "echo -n ${^} | awk 'BEGIN {RS=\" \"} /.ml$/ { print }' | xargs qtest extract -o ${@}"))))
+  (action    (system "echo -n ${^} | awk 'BEGIN {RS=\" \"} /.ml$/ { print }' | xargs qtest extract -p 'open Giantbomb' -o ${@}"))))
 
 (executable
   ((name      run_tests)
