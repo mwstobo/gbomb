@@ -54,9 +54,10 @@ let rec save_stream st oc =
 
 let download_video api_key video_id quality =
   Giantbomb.Client.get_video api_key video_id
-  >>= fun video_opt ->
-  match video_opt with
-  | Some video -> (
+  >>= fun video_result ->
+  match video_result with
+  | Error s -> Lwt.return (print_endline s)
+  | Ok video ->
       let url_option =
         match quality with
         | "high" -> video.Giantbomb.Types.high_url
@@ -74,16 +75,14 @@ let download_video api_key video_id quality =
           let oc = open_out filename in
           print_endline ("Starting download of " ^ filename) ;
           save_stream (Cohttp_lwt.Body.to_stream body) oc
-      | None -> Lwt.return (print_endline "Specified quality not found!") )
-  | _ -> Lwt.return (print_endline "Not found!")
+      | None -> Lwt.return (print_endline "Specified quality not found!")
 
 
 let rec print_videos video_opts =
   match video_opts with
   | [] -> ()
-  | None :: rest -> print_videos rest
-  | (Some video) :: rest ->
-      let length = video.Giantbomb.Types.length in
+  | video :: rest ->
+      let length = video.Giantbomb.Types.length_seconds in
       let hours = length / 60 / 60 in
       let minutes = length / 60 mod 60 in
       let seconds = length mod 60 in
@@ -95,7 +94,10 @@ let rec print_videos video_opts =
 let list_videos api_key limit =
   let filters = Giantbomb.Types.{limit} in
   Giantbomb.Client.get_videos ~filters api_key
-  >>= fun video_opts -> Lwt.return (print_videos video_opts)
+  >>= fun result ->
+  match result with
+  | Error s -> Lwt.return (print_endline s)
+  | Ok videos -> Lwt.return (print_videos videos)
 
 
 let () =

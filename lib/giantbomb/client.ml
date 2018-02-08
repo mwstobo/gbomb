@@ -2,7 +2,7 @@ let ( >>= ) = Lwt.( >>= )
 
 let ua = Cohttp.Header.user_agent
 
-let default_filters = Types.{limit= 10}
+let default_filters = Types.{limit=10}
 
 let build_api_uri ?(filters= default_filters) api_key resource =
   let api_base = "https://www.giantbomb.com/api" in
@@ -16,40 +16,25 @@ let do_request uri =
   Cohttp_lwt_unix.Client.get ~headers uri
   >>= fun (_, body) ->
   Cohttp_lwt.Body.to_string body
-  >>= fun body_string -> Lwt.return (Yojson.Basic.from_string body_string)
+  >>= fun body_string -> Lwt.return (Yojson.Safe.from_string body_string)
 
 
-let build_video video_json =
-  let name_json = Yojson.Basic.Util.member "name" video_json in
-  let guid_json = Yojson.Basic.Util.member "guid" video_json in
-  let filename_json = Yojson.Basic.Util.member "url" video_json in
-  let low_url_json = Yojson.Basic.Util.member "low_url" video_json in
-  let high_url_json = Yojson.Basic.Util.member "high_url" video_json in
-  let hd_url_json = Yojson.Basic.Util.member "hd_url" video_json in
-  let length_json = Yojson.Basic.Util.member "length_seconds" video_json in
-  let string_fields =
-    Yojson.Basic.Util.filter_string [name_json; guid_json; filename_json]
-  in
-  let int_fields = Yojson.Basic.Util.filter_int [length_json] in
-  let option_fields =
-    List.map Yojson.Basic.Util.to_string_option
-      [low_url_json; high_url_json; hd_url_json]
-  in
-  match (string_fields, int_fields, option_fields) with
-  | [name; guid; filename], [length], [low_url; high_url; hd_url] ->
-      Some Types.{name; guid; filename; low_url; high_url; hd_url; length}
-  | _ -> None
+let return_result response json_deserializer =
+  response
+  >>= fun json ->
+  let results = Yojson.Safe.Util.member "results" json in
+  Lwt.return
+    ( match json_deserializer results with
+    | Result.Error s ->
+        Types.Error ("failed to deserialize json with error: " ^ s)
+    | Result.Ok deserialized -> Types.Ok deserialized )
 
 
 let get_video api_key video_id =
-  do_request (build_api_uri api_key ("/video/" ^ video_id))
-  >>= fun json ->
-  let video_json = Yojson.Basic.Util.member "results" json in
-  Lwt.return (build_video video_json)
+  let resp = do_request (build_api_uri api_key ("/video/" ^ video_id)) in
+  return_result resp Types.video_of_yojson
 
 
 let get_videos ?(filters= default_filters) api_key =
-  do_request (build_api_uri ~filters api_key "/videos")
-  >>= fun json ->
-  let results = Yojson.Basic.Util.member "results" json in
-  Lwt.return (Yojson.Basic.Util.convert_each build_video results)
+  let resp = do_request (build_api_uri ~filters api_key "/videos") in
+  return_result resp Types.videos_of_yojson
