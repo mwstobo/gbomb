@@ -1,6 +1,6 @@
 let ( >>= ) = Lwt.( >>= )
 
-let ua = Cohttp.Header.user_agent
+let ua = "gbomb-ocaml"
 
 let default_filters = Types.{limit=10}
 
