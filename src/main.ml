@@ -53,20 +53,20 @@ let rec save_stream st oc =
 
 
 let download_video api_key video_id quality =
-  Giantbomb.Client.get_video api_key video_id
+  Giantbomb.video_get api_key video_id
   >>= fun video_result ->
   match video_result with
   | Error s -> Lwt.return (print_endline s)
   | Ok video ->
       let url_option =
         match quality with
-        | "high" -> video.Giantbomb.Types.high_url
-        | "hd" -> video.Giantbomb.Types.hd_url
-        | _ -> video.Giantbomb.Types.low_url
+        | "high" -> video.Giantbomb.Resources.high_url
+        | "hd" -> video.Giantbomb.Resources.hd_url
+        | _ -> video.Giantbomb.Resources.low_url
       in
       match url_option with
       | Some url ->
-          let filename = video.Giantbomb.Types.filename in
+          let filename = video.Giantbomb.Resources.url in
           let authed_url = url ^ "?api_key=" ^ api_key in
           let ua = Cohttp.Header.user_agent in
           let headers = Cohttp.Header.init_with "User-Agent" ua in
@@ -82,18 +82,17 @@ let rec print_videos video_opts =
   match video_opts with
   | [] -> ()
   | video :: rest ->
-      let length = video.Giantbomb.Types.length_seconds in
+      let length = video.Giantbomb.Resources.length_seconds in
       let hours = length / 60 / 60 in
       let minutes = length / 60 mod 60 in
       let seconds = length mod 60 in
-      Format.printf "%s: %s (%dh %dm %ds)\n" video.Giantbomb.Types.guid
-        video.Giantbomb.Types.name hours minutes seconds ;
+      Format.printf "%s: %s (%dh %dm %ds)\n" video.Giantbomb.Resources.guid
+        video.Giantbomb.Resources.name hours minutes seconds ;
       print_videos rest
 
 
 let list_videos api_key limit =
-  let filters = Giantbomb.Types.{limit} in
-  Giantbomb.Client.get_videos ~filters api_key
+  Giantbomb.videos_get ~limit api_key
   >>= fun result ->
   match result with
   | Error s -> Lwt.return (print_endline s)
