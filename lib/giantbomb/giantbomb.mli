@@ -1,7 +1,7 @@
 module Api : sig
   type key = string
 
-  type 'a response = Ok of 'a | Error of string
+  type 'a response = Ok of 'a | JsonError of string | HttpError of int
 end
 
 module Resources : sig

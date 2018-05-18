@@ -10,7 +10,7 @@ module Api = struct
 
   type key = string
 
-  type 'a response = Ok of 'a | Error of string
+  type 'a response = Ok of 'a | JsonError of string | HttpError of int
 
   let base = "https://www.giantbomb.com/api"
 
@@ -22,12 +22,11 @@ module Api = struct
 
   let response_of_yojson_result yjr =
     match yjr with
-    | Result.Error s -> Error (sprintf "Failed to deserialize json: %s" s)
     | Result.Ok deserialized -> Ok deserialized
+    | Result.Error s -> JsonError s
 
   let response_of_http_error code =
-    let err = sprintf "Giantbomb API returned an error: %d" code in
-    Lwt.return (Error err)
+    HttpError code
 
   let format_response deserializer resp =
     resp >>= fun (info, body) ->
@@ -38,7 +37,7 @@ module Api = struct
       >|= Yojson.Safe.Util.member "results"
       >|= deserializer
       >|= response_of_yojson_result
-    else response_of_http_error code
+    else Lwt.return (response_of_http_error code)
 end
 
 module Path = struct

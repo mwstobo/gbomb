@@ -56,7 +56,12 @@ let download_video api_key video_id quality =
   Giantbomb.video_get api_key video_id
   >>= fun video_result ->
   match video_result with
-  | Error s -> Lwt.return (print_endline s)
+  | JsonError s ->
+      let err = "Error parsing JSON response: " ^ s in
+      Lwt.return (print_endline err)
+  | HttpError c ->
+      let err = "Error making HTTP request with code: " ^ (string_of_int c) in
+      Lwt.return (print_endline err)
   | Ok video ->
       let url_option =
         match quality with
@@ -95,7 +100,12 @@ let list_videos api_key limit =
   Giantbomb.videos_get ~limit api_key
   >>= fun result ->
   match result with
-  | Error s -> Lwt.return (print_endline s)
+  | JsonError s ->
+      let err = "Error parsing JSON response: " ^ s in
+      Lwt.return (print_endline err)
+  | HttpError c ->
+      let err = "Error making HTTP request with code: " ^ (string_of_int c) in
+      Lwt.return (print_endline err)
   | Ok videos -> Lwt.return (print_videos videos)
 
 
