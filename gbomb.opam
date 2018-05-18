@@ -8,3 +8,15 @@ bug-reports: "https://github.com/mwstobo/gbomb"
 license: "MIT"
 dev-repo: "https://github.com/mwstobo/gbomb"
 build: [make]
+build-test: [make test]
+depends: [
+  "jbuilder"
+  "lwt"
+  "lwt_ssl"
+  "cohttp"
+  "cohttp-lwt-unix"
+  "yojson"
+  "ppx_deriving_yojson"
+  "qcheck" {test}
+  "qtest" {test}
+]
