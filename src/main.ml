@@ -21,13 +21,13 @@ let create_videos opts =
     match int_of_string_opt limit_str with
     | Some limit -> Videos (limit, None)
     | None -> Invalid )
-  | [(Cli.Param ("video-show", video_show_str))] -> (
+  | [(Cli.Param ("show", video_show_str))] -> (
     match int_of_string_opt video_show_str with
     | Some video_show -> Videos (10, (Some video_show))
     | None -> Invalid )
   | [(Cli.Param ("limit", limit_str));
-     (Cli.Param ("video-show", video_show_str))]
-  | [(Cli.Param ("video-show", video_show_str));
+     (Cli.Param ("show", video_show_str))]
+  | [(Cli.Param ("show", video_show_str));
      (Cli.Param ("limit", limit_str))] -> (
     match (int_of_string_opt limit_str, int_of_string_opt video_show_str) with
     | (Some limit, Some video_show) -> Videos (limit, Some video_show)
