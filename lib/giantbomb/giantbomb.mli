@@ -1,22 +1,27 @@
-module Api : sig
+module Video : sig
   type key = string
 
+  type fields = {
+    id: int;
+    guid: string;
+    name: string;
+    url: string;
+    low_url: string option;
+    high_url: string option;
+    hd_url: string option;
+    length_seconds: int;
+  }
+
+  type filters = {
+    limit: int option;
+    video_show: int option;
+  }
+end
+
+module VideoApi : sig
   type 'a response = Ok of 'a | JsonError of string | HttpError of int
+
+  val get : string -> Video.key -> Video.fields response Lwt.t
+
+  val get_many : Video.filters -> string -> Video.fields list response Lwt.t
 end
-
-module Resources : sig
-  type video =
-    { guid: string
-    ; name: string
-    ; url: string
-    ; low_url: string option
-    ; high_url: string option
-    ; hd_url: string option
-    ; length_seconds: int }
-
-  type videos = video list
-end
-
-val video_get : Api.key -> string -> Resources.video Api.response Lwt.t
-
-val videos_get : ?limit : int -> Api.key -> Resources.videos Api.response Lwt.t

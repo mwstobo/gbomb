@@ -1,32 +1,81 @@
-(*${*)
 open Lwt.Infix
 let sprintf = Printf.sprintf
-(*$}*)
 
-module Api = struct
-  module Default = struct
-    let limit = 10
-  end
+module type Fetchable = sig
+  type key
+  type fields
+  type filters
+  val resource_url : key -> string
+  val resources_url : string
+  val params_of_filters : filters -> (string * string) list
+  val deserializer : Yojson.Safe.json -> (fields, string) Result.result
+  val list_deserializer : Yojson.Safe.json -> (fields list, string) Result.result
+end
 
+module Video = struct
   type key = string
 
+  type fields = {
+    id: int;
+    guid: string;
+    name: string;
+    url: string;
+    low_url: string option;
+    high_url: string option;
+    hd_url: string option;
+    length_seconds: int;
+  } [@@deriving yojson {strict=false}]
+
+  type fields_list = fields list [@@deriving yojson {strict=false}]
+
+  type filters = {
+    limit: int option;
+    video_show: int option;
+  } [@@deriving fields]
+
+  let resource_url guid = "videos/" ^ guid
+  let resources_url = "videos"
+
+  let params_of_filters filters =
+    let acc_option to_s = fun acc field ->
+      match Fieldslib.Field.get field filters with
+      | None -> acc
+      | Some value -> (Fieldslib.Field.name field, to_s value) :: acc
+    in
+    Fields_of_filters.fold
+      ~init: []
+      ~limit: (acc_option string_of_int)
+      ~video_show: (acc_option string_of_int)
+
+  let deserializer = fields_of_yojson
+  let list_deserializer = fields_list_of_yojson
+end
+
+
+module Api (F: Fetchable) = struct
   type 'a response = Ok of 'a | JsonError of string | HttpError of int
 
   let base = "https://www.giantbomb.com/api"
-
-  let user_agent = "gbomb-ocaml"
-
+  let user_agent = "giantbomb-ocaml"
   let default_headers = Cohttp.Header.init_with "User-Agent" user_agent
 
-  let send uri = Cohttp_lwt_unix.Client.get ~headers:default_headers uri
+  let send uri =
+    print_endline (Uri.to_string uri);
+    Cohttp_lwt_unix.Client.get ~headers:default_headers uri
+
+  let query_string_of_list params =
+    let qjoin (k, v) = sprintf "%s=%s" k v in
+    let qstring = List.map qjoin params |> String.concat "&" in
+    match qstring with
+    | "" -> sprintf ""
+    | _ -> sprintf "?%s" qstring
 
   let response_of_yojson_result yjr =
     match yjr with
     | Result.Ok deserialized -> Ok deserialized
     | Result.Error s -> JsonError s
 
-  let response_of_http_error code =
-    HttpError code
+  let response_of_http_error code = HttpError code
 
   let format_response deserializer resp =
     resp >>= fun (info, body) ->
@@ -38,62 +87,23 @@ module Api = struct
       >|= deserializer
       >|= response_of_yojson_result
     else Lwt.return (response_of_http_error code)
+
+  let get api_key key =
+    let base_params = [("api_key", api_key); ("format", "json")] in
+    let query_string = query_string_of_list base_params in
+    sprintf "%s/%s/%s" base (F.resource_url key) query_string
+    |> Uri.of_string
+    |> send
+    |> format_response F.deserializer
+
+  let get_many filters api_key =
+    let base_params = [("api_key", api_key); ("format", "json")] in
+    let resource_params = F.params_of_filters filters in
+    let query_string = query_string_of_list (base_params @ resource_params) in
+    sprintf "%s/%s/%s" base F.resources_url query_string
+    |> Uri.of_string
+    |> send
+    |> format_response F.list_deserializer
 end
 
-module Path = struct
-  (*${*)
-  (*$= with_resource
-    ("a.test/videos")  (with_resource "videos" None "a.test")
-    ("a.test/video/1") (with_resource "video" (Some "1") "a.test")
-  *)
-  let with_resource resource_name resource_id path =
-    match resource_id with
-    | Some id -> sprintf "%s/%s/%s" path resource_name id
-    | None -> sprintf "%s/%s" path resource_name
-
-  (*$= with_query
-    ("a.test/b")          (with_query [] "a.test/b")
-    ("a.test/b/?c=d")     (with_query [("c", "d")] "a.test/b")
-    ("a.test/b/?c=d&e=f") (with_query [("c", "d"); ("e", "f")] "a.test/b")
-  *)
-  let with_query query_params path =
-    let qjoin (k, v) = sprintf "%s=%s" k v in
-    let qstring = List.map qjoin query_params |> String.concat "&" in
-    match qstring with
-    | "" -> sprintf "%s" path
-    | _ -> sprintf "%s/?%s" path qstring
-  (*$}*)
-end
-
-module Resources = struct
-  type video =
-    { guid: string
-    ; name: string
-    ; url: string
-    ; low_url: string option
-    ; high_url: string option
-    ; hd_url: string option
-    ; length_seconds: int }
-  [@@deriving yojson {strict=false}]
-
-  type videos = video list [@@deriving yojson {strict=false}]
-end
-
-let video_get api_key video_id =
-  Api.base
-  |> Path.with_resource "video" (Some video_id)
-  |> Path.with_query [("api_key", api_key); ("format", "json")]
-  |> Uri.of_string
-  |> Api.send
-  |> Api.format_response Resources.video_of_yojson
-
-let videos_get ?(limit=Api.Default.limit) api_key =
-  Api.base
-  |> Path.with_resource "videos" None
-  |> Path.with_query
-    [ ("api_key", api_key)
-    ; ("format", "json")
-    ; ("limit", string_of_int limit) ]
-  |> Uri.of_string
-  |> Api.send
-  |> Api.format_response Resources.videos_of_yojson
+module VideoApi = Api(Video)
