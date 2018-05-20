@@ -51,17 +51,25 @@ module Video = struct
   let list_deserializer = fields_list_of_yojson
 end
 
+module type Api = sig
+  type 'a response
+  val base : string
+  val query_string_of_list : (string * string) list -> string
+  val send : Uri.t -> (Cohttp_lwt.Response.t * Cohttp_lwt.Body.t) Lwt.t
+  val format_response :
+    (Yojson.Safe.json -> ('a, string) Result.result)
+    -> (Cohttp_lwt.Response.t * Cohttp_lwt.Body.t) Lwt.t
+    -> 'a response Lwt.t
+end
 
-module Api (F: Fetchable) = struct
+module GiantbombApi = struct
   type 'a response = Ok of 'a | JsonError of string | HttpError of int
 
   let base = "https://www.giantbomb.com/api"
   let user_agent = "giantbomb-ocaml"
   let default_headers = Cohttp.Header.init_with "User-Agent" user_agent
 
-  let send uri =
-    print_endline (Uri.to_string uri);
-    Cohttp_lwt_unix.Client.get ~headers:default_headers uri
+  let send uri = Cohttp_lwt_unix.Client.get ~headers:default_headers uri
 
   let query_string_of_list params =
     let qjoin (k, v) = sprintf "%s=%s" k v in
@@ -88,22 +96,27 @@ module Api (F: Fetchable) = struct
       >|= response_of_yojson_result
     else Lwt.return (response_of_http_error code)
 
+end
+
+module Client (A: Api)(F: Fetchable) = struct
+  type 'a response = 'a A.response
+
   let get api_key key =
     let base_params = [("api_key", api_key); ("format", "json")] in
-    let query_string = query_string_of_list base_params in
-    sprintf "%s/%s/%s" base (F.resource_url key) query_string
+    let query_string = A.query_string_of_list base_params in
+    sprintf "%s/%s/%s" A.base (F.resource_url key) query_string
     |> Uri.of_string
-    |> send
-    |> format_response F.deserializer
+    |> A.send
+    |> A.format_response F.deserializer
 
   let get_many filters api_key =
     let base_params = [("api_key", api_key); ("format", "json")] in
     let resource_params = F.params_of_filters filters in
-    let query_string = query_string_of_list (base_params @ resource_params) in
-    sprintf "%s/%s/%s" base F.resources_url query_string
+    let query_string = A.query_string_of_list (base_params @ resource_params) in
+    sprintf "%s/%s/%s" A.base F.resources_url query_string
     |> Uri.of_string
-    |> send
-    |> format_response F.list_deserializer
+    |> A.send
+    |> A.format_response F.list_deserializer
 end
 
-module VideoApi = Api(Video)
+module VideoClient = Client(GiantbombApi)(Video)

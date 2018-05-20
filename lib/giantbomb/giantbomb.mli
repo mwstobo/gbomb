@@ -1,3 +1,7 @@
+module GiantbombApi : sig
+  type 'a response = Ok of 'a | JsonError of string | HttpError of int
+end
+
 module Video : sig
   type key = string
 
@@ -18,8 +22,8 @@ module Video : sig
   }
 end
 
-module VideoApi : sig
-  type 'a response = Ok of 'a | JsonError of string | HttpError of int
+module VideoClient : sig
+  type 'a response = 'a GiantbombApi.response
 
   val get : string -> Video.key -> Video.fields response Lwt.t
 

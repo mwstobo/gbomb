@@ -53,7 +53,7 @@ let rec save_stream st oc =
 
 
 let download_video api_key video_id quality =
-  Giantbomb.VideoApi.get api_key video_id
+  Giantbomb.VideoClient.get api_key video_id
   >>= fun video_result ->
   match video_result with
   | JsonError s ->
@@ -101,7 +101,7 @@ let list_videos api_key limit =
     Giantbomb.Video.limit = Some limit;
     Giantbomb.Video.video_show = None;
   } in
-  Giantbomb.VideoApi.get_many filters api_key
+  Giantbomb.VideoClient.get_many filters api_key
   >>= fun result ->
   match result with
   | JsonError s ->
