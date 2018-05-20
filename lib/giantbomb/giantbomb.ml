@@ -32,7 +32,7 @@ module Video = struct
     video_show: int option;
   } [@@deriving fields]
 
-  let resource_url guid = "videos/" ^ guid
+  let resource_url guid = "video/" ^ guid
   let resources_url = "videos"
 
   let string_of_filters filters =
@@ -65,7 +65,7 @@ module VideoShow = struct
 
   type filters = None
 
-  let resource_url guid = "video_shows/" ^ guid
+  let resource_url guid = "video_show/" ^ guid
   let resources_url = "video_shows"
 
   let string_of_filters filters = ""
