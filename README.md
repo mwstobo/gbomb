@@ -24,5 +24,5 @@ $ gbomb list --limit n
 ## TODO
 - [x] Actually download the video when asked
 - [x] Get a list of last `n` videos, filtering by show
-- [ ] Add a show list command
-- [X] Add show filtering to videos command
+- [x] Add a show list command
+- [x] Add show filtering to videos command

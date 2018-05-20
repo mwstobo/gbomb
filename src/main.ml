@@ -2,6 +2,7 @@ type action =
   Invalid
   | Download of string * string
   | Videos of int * int option
+  | VideoShows of int
 
 let ( >>= ) = Lwt.( >>= )
 
@@ -35,10 +36,21 @@ let create_videos opts =
   | _ -> Invalid
 
 
+let create_video_show opts =
+  match opts with
+  | [(Cli.Param ("limit", limit_str))] -> (
+    match int_of_string_opt limit_str with
+    | Some limit -> VideoShows limit
+    | None -> Invalid )
+  | _ -> VideoShows 10
+
+
+
 let get_action opts =
   match opts with
   | (Cli.Arg "download") :: opts -> create_download opts
   | (Cli.Arg "videos") :: opts | (Cli.Arg "list") :: opts -> create_videos opts
+  | (Cli.Arg "shows") :: opts -> create_video_show opts
   | _ -> Invalid
 
 
@@ -129,6 +141,33 @@ let list_videos api_key limit video_show =
   | Ok videos -> Lwt.return (print_videos videos)
 
 
+let rec print_video_shows video_show_opts =
+  match video_show_opts with
+  | [] -> ()
+  | video_show :: rest ->
+      Format.printf "%d: %s\n"
+        video_show.Giantbomb.VideoShow.id
+        video_show.Giantbomb.VideoShow.title;
+      print_video_shows rest
+
+
+let list_video_shows api_key limit =
+  let api_filters = {
+    Giantbomb.Api.limit = limit;
+  } in
+  let video_show_filters = Giantbomb.VideoShow.None in
+  Giantbomb.VideoShowClient.get_many api_filters video_show_filters api_key
+  >>= fun result ->
+  match result with
+  | JsonError s ->
+      let err = "Error parsing JSON response: " ^ s in
+      Lwt.return (print_endline err)
+  | HttpError c ->
+      let err = "Error making HTTP request with code: " ^ (string_of_int c) in
+      Lwt.return (print_endline err)
+  | Ok video_shows -> Lwt.return (print_video_shows video_shows)
+
+
 let () =
   let args = Array.sub Sys.argv 1 (Array.length Sys.argv - 1) in
   let opts = Cli.parse_options (Array.to_list args) in
@@ -142,4 +181,5 @@ let () =
           Lwt_main.run (download_video api_key video_id quality)
       | Videos (limit, video_show) ->
           Lwt_main.run (list_videos api_key limit video_show)
+      | VideoShows limit -> Lwt_main.run(list_video_shows api_key limit)
       | _ -> print_endline "Invalid action!"

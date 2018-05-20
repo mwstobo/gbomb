@@ -52,6 +52,28 @@ module Video = struct
   let list_deserializer = fields_list_of_yojson
 end
 
+module VideoShow = struct
+  type key = string
+
+  type fields = {
+    id: int;
+    guid: string;
+    title: string;
+  } [@@deriving yojson {strict=false}]
+
+  type fields_list = fields list [@@deriving yojson {strict=false}]
+
+  type filters = None
+
+  let resource_url guid = "video_shows/" ^ guid
+  let resources_url = "video_shows"
+
+  let string_of_filters filters = ""
+
+  let deserializer = fields_of_yojson
+  let list_deserializer = fields_list_of_yojson
+end
+
 module type Queryable = sig
   type 'a response
   type filters
@@ -86,9 +108,7 @@ module Api = struct
       ~init: []
       ~limit: (acc string_of_int)
 
-  let send uri =
-    print_endline (Uri.to_string uri);
-    Cohttp_lwt_unix.Client.get ~headers:default_headers uri
+  let send uri = Cohttp_lwt_unix.Client.get ~headers:default_headers uri
 
   let query_string_of_list params =
     let qjoin (k, v) = sprintf "%s=%s" k v in
@@ -140,3 +160,4 @@ module Client (Q: Queryable)(F: Fetchable) = struct
 end
 
 module VideoClient = Client(Api)(Video)
+module VideoShowClient = Client(Api)(VideoShow)
