@@ -1,4 +1,7 @@
-type action = Invalid | Download of string * string | Videos of int
+type action =
+  Invalid
+  | Download of string * string
+  | Videos of int * int option
 
 let ( >>= ) = Lwt.( >>= )
 
@@ -15,9 +18,20 @@ let create_videos opts =
   match opts with
   | [(Cli.Param ("limit", limit_str))] -> (
     match int_of_string_opt limit_str with
-    | Some limit -> Videos limit
+    | Some limit -> Videos (limit, None)
     | None -> Invalid )
-  | [] -> Videos 10
+  | [(Cli.Param ("video-show", video_show_str))] -> (
+    match int_of_string_opt video_show_str with
+    | Some video_show -> Videos (10, (Some video_show))
+    | None -> Invalid )
+  | [(Cli.Param ("limit", limit_str));
+     (Cli.Param ("video-show", video_show_str))]
+  | [(Cli.Param ("video-show", video_show_str));
+     (Cli.Param ("limit", limit_str))] -> (
+    match (int_of_string_opt limit_str, int_of_string_opt video_show_str) with
+    | (Some limit, Some video_show) -> Videos (limit, Some video_show)
+    | _ -> Invalid )
+  | [] -> Videos (10, None)
   | _ -> Invalid
 
 
@@ -96,12 +110,14 @@ let rec print_videos video_opts =
       print_videos rest
 
 
-let list_videos api_key limit =
-  let filters = {
-    Giantbomb.Video.limit = Some limit;
-    Giantbomb.Video.video_show = None;
+let list_videos api_key limit video_show =
+  let api_filters = {
+    Giantbomb.Api.limit = limit;
   } in
-  Giantbomb.VideoClient.get_many filters api_key
+  let video_filters = {
+    Giantbomb.Video.video_show = video_show;
+  } in
+  Giantbomb.VideoClient.get_many api_filters video_filters api_key
   >>= fun result ->
   match result with
   | JsonError s ->
@@ -124,5 +140,6 @@ let () =
       match action with
       | Download (video_id, quality) ->
           Lwt_main.run (download_video api_key video_id quality)
-      | Videos limit -> Lwt_main.run (list_videos api_key limit)
+      | Videos (limit, video_show) ->
+          Lwt_main.run (list_videos api_key limit video_show)
       | _ -> print_endline "Invalid action!"
