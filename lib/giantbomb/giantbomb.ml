@@ -1,7 +1,7 @@
 open Lwt.Infix
 let sprintf = Printf.sprintf
 
-module type Fetchable = sig
+module type Resource = sig
   type key
   type fields
   type filters
@@ -74,19 +74,6 @@ module VideoShow = struct
   let list_deserializer = fields_list_of_yojson
 end
 
-module type Queryable = sig
-  type 'a response
-  type filters
-  val base : string
-  val params_of_filters : filters -> (string * string) list
-  val query_string_of_list : (string * string) list -> string
-  val send : Uri.t -> (Cohttp_lwt.Response.t * Cohttp_lwt.Body.t) Lwt.t
-  val format_response :
-    (Yojson.Safe.json -> ('a, string) Result.result)
-    -> (Cohttp_lwt.Response.t * Cohttp_lwt.Body.t) Lwt.t
-    -> 'a response Lwt.t
-end
-
 module Api = struct
   type 'a response = Ok of 'a | JsonError of string | HttpError of int
 
@@ -137,27 +124,27 @@ module Api = struct
 
 end
 
-module Client (Q: Queryable)(F: Fetchable) = struct
+module Client (R: Resource) = struct
   let get api_key key =
     let base_params = [("api_key", api_key); ("format", "json")] in
-    let query_string = Q.query_string_of_list base_params in
-    sprintf "%s/%s/%s" Q.base (F.resource_url key) query_string
+    let query_string = Api.query_string_of_list base_params in
+    sprintf "%s/%s/%s" Api.base (R.resource_url key) query_string
     |> Uri.of_string
-    |> Q.send
-    |> Q.format_response F.deserializer
+    |> Api.send
+    |> Api.format_response R.deserializer
 
-  let get_many query_filters fetch_filters api_key =
+  let get_many api_filters resource_filters api_key =
     let base_params = [("api_key", api_key); ("format", "json")] in
-    let query_params = Q.params_of_filters query_filters in
-    let fetch_param = ("filter", F.string_of_filters fetch_filters) in
+    let api_params = Api.params_of_filters api_filters in
+    let resource_param = ("filter", R.string_of_filters resource_filters) in
     let query_string =
-      Q.query_string_of_list (fetch_param :: base_params @ query_params)
+      Api.query_string_of_list (resource_param :: base_params @ api_params)
     in
-    sprintf "%s/%s/%s" Q.base F.resources_url query_string
+    sprintf "%s/%s/%s" Api.base R.resources_url query_string
     |> Uri.of_string
-    |> Q.send
-    |> Q.format_response F.list_deserializer
+    |> Api.send
+    |> Api.format_response R.list_deserializer
 end
 
-module VideoClient = Client(Api)(Video)
-module VideoShowClient = Client(Api)(VideoShow)
+module VideoClient = Client(Video)
+module VideoShowClient = Client(VideoShow)
