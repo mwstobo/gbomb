@@ -19,6 +19,10 @@ $ gbomb download --quality [low|high|hd] VIDEO_ID
 $ gbomb videos --limit n
 # You can also use "list"
 $ gbomb list --limit n
+# Filter by show id
+$ gbomb list --show 10
+# Get a list of shows
+$ gbomb shows --limit n
 ```
 
 ## TODO
