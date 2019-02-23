@@ -68,7 +68,7 @@ module VideoShow = struct
   let resource_url guid = "video_show/" ^ guid
   let resources_url = "video_shows"
 
-  let string_of_filters filters = ""
+  let string_of_filters _filters = ""
 
   let deserializer = fields_of_yojson
   let list_deserializer = fields_list_of_yojson

@@ -1,6 +1,0 @@
-(jbuild_version 1)
-
-(executable
- ((name        main)
-  (public_name gbomb)
-  (libraries   (giantbomb cli lwt cohttp cohttp-lwt-unix))))

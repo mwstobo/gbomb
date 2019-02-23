@@ -1,22 +1,22 @@
-opam-version: "1.2"
+opam-version: "2.0"
 name: "gbomb"
 version: "0.1.0"
+synopsis: "Giant Bomb command line client"
 maintainer: "Matt Stobo <mwstobo@gmail.com>"
 author: "Matt Stobo <mwstobo@gmail.com>"
+license: "MIT"
 homepage: "https://github.com/mwstobo/gbomb"
 bug-reports: "https://github.com/mwstobo/gbomb"
-license: "MIT"
-dev-repo: "https://github.com/mwstobo/gbomb"
-build: [make]
-build-test: [make test]
+build: ["dune" "build" "-p" name]
+dev-repo: "git+https://github.com/mwstobo/gbomb"
 depends: [
-  "jbuilder"
-  "lwt"
-  "lwt_ssl"
-  "cohttp"
-  "cohttp-lwt-unix"
-  "yojson"
-  "ppx_deriving_yojson"
-  "qcheck" {test}
-  "qtest" {test}
+  "dune"                { >= "1.7" }
+  "lwt"                 { >= "4.1" }
+  "lwt_ssl"             { >= "1.1" }
+  "cohttp"              { >= "2.0" }
+  "cohttp-lwt-unix"     { >= "2.0" }
+  "yojson"              { >= "1.5" }
+  "ppx_deriving_yojson" { >= "3.3" }
+  "qcheck"              { >= "0.9" & with-test }
+  "qtest"               { >= "2.9" & with-test }
 ]
