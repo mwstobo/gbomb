@@ -1,10 +1,7 @@
 (library
- (name       giantbomb)
- (synopsis   "Interface for the Giant Bomb API")
- (preprocess (pps ppx_deriving_yojson ppx_fields_conv))
- (libraries  lwt
-             lwt_ssl
-             cohttp
-             cohttp-lwt-unix
-             yojson
-             ppx_deriving_yojson.runtime))
+ (name giantbomb)
+ (synopsis "Interface for the Giant Bomb API")
+ (preprocess
+  (pps ppx_deriving_yojson ppx_fields_conv))
+ (libraries lwt lwt_ssl cohttp cohttp-lwt-unix yojson
+   ppx_deriving_yojson.runtime))

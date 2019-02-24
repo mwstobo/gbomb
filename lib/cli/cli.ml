@@ -31,7 +31,6 @@ let get_string_type opt =
     Dash (String.sub opt start (String.length opt - start))
   else Just opt
 
-
 (*$= parse_options
   ([ Flag("t") ])                   (parse_options [ "-t" ])
   ([ Flag("foo") ])                 (parse_options [ "--foo" ])
@@ -54,10 +53,10 @@ let rec parse_options options =
     match get_string_type opt with
     | Just arg -> [Arg arg]
     | Dash flag -> [Flag flag] )
-  | opt :: second :: options ->
+  | opt :: second :: options -> (
     match get_string_type opt with
     | Just arg -> Arg arg :: parse_options (second :: options)
-    | Dash dash ->
+    | Dash dash -> (
       match get_string_type second with
       | Just param_val -> Param (dash, param_val) :: parse_options options
-      | _ -> Flag dash :: parse_options (second :: options)
+      | _ -> Flag dash :: parse_options (second :: options) ) )

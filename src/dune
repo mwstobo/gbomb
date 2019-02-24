@@ -1,4 +1,4 @@
 (executable
- (name        main)
+ (name main)
  (public_name gbomb)
- (libraries   giantbomb cli lwt cohttp cohttp-lwt-unix))
+ (libraries giantbomb cli lwt cohttp cohttp-lwt-unix))
