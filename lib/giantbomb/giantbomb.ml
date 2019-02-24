@@ -24,6 +24,7 @@ module Video = struct
     high_url: string option;
     hd_url: string option;
     length_seconds: int;
+    saved_time: string option;
   } [@@deriving yojson {strict=false}]
 
   type fields_list = fields list [@@deriving yojson {strict=false}]

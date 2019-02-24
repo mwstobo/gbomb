@@ -30,3 +30,5 @@ $ gbomb shows --limit n
 - [x] Get a list of last `n` videos, filtering by show
 - [x] Add a show list command
 - [x] Add show filtering to videos command
+- [x] Add "watched" indicator to video list
+- [ ] Mark videos as watched upon download

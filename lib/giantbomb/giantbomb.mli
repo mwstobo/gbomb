@@ -18,6 +18,7 @@ module Video : sig
     high_url: string option;
     hd_url: string option;
     length_seconds: int;
+    saved_time: string option;
   }
 
   type filters = {

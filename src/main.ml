@@ -117,7 +117,13 @@ let rec print_videos video_opts =
       let hours = length / 60 / 60 in
       let minutes = length / 60 mod 60 in
       let seconds = length mod 60 in
-      Format.printf "%s: %s (%dh %dm %ds)\n" video.Giantbomb.Video.guid
+      let watched =
+        match video.Giantbomb.Video.saved_time with
+        | None -> false
+        | Some t -> (float_of_string t) /. (float_of_int length) >= 0.98
+      in
+      Format.printf "%s %s: %s (%dh %dm %ds)\n"
+        (if watched then "w" else "-") video.Giantbomb.Video.guid
         video.Giantbomb.Video.name hours minutes seconds ;
       print_videos rest
 
