@@ -1,0 +1,29 @@
+{
+  "name": "gbomb",
+  "description": "Giant Bomb command line client",
+  "version": "0.1.0",
+  "dependencies": {
+    "ocaml": "~4.07",
+    "@opam/dune": "~1.7",
+    "@opam/lwt": "~4.1",
+    "@opam/lwt_ssl": "~1.1",
+    "@opam/cohttp": "~2.0",
+    "@opam/cohttp-lwt-unix": "~2.0",
+    "@opam/yojson": "~1.5",
+    "@opam/ppx_deriving_yojson": ">=3.3 <3.4"
+  },
+  "devDependencies": {
+    "@opam/ocamlformat": "*",
+    "@opam/merlin": "*",
+    "@opam/qcheck": ">=0.9 <0.10",
+    "@opam/qtest": ">=2.9 <2.10"
+  },
+  "scripts": {
+    "format": "dune build @fmt",
+    "promote": "dune promote",
+    "test": "dune runtest"
+  },
+  "esy": {
+    "build": ["dune build"]
+  }
+}

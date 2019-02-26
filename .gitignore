@@ -1,5 +1,7 @@
 _build
+_esy
 _opam
+node_modules
 gbomb.install
 *.byte
 *.native
