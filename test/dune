@@ -4,12 +4,12 @@
   (source_tree ../lib))
  (action
   (system
-    "echo -n %{deps} | awk 'BEGIN {RS=\" \"} /.ml$/ { print }' | xargs qtest extract -o %{targets}")))
+    "echo -n %{deps} | awk 'BEGIN {RS=\" \"} /.ml$/ { print }' | grep -v giantbomb | xargs qtest extract -o %{targets}")))
 
 (executable
  (name run_tests)
  (modules run_tests)
- (libraries qcheck giantbomb cli))
+ (libraries qcheck cli))
 
 (alias
  (name runtest)
