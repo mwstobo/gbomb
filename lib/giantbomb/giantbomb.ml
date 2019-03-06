@@ -1,30 +1,17 @@
-open Lwt.Infix
-
-let sprintf = Printf.sprintf
-
 module type Resource = sig
-  type key
+  type t
 
-  type fields
+  type params
 
-  type filters
+  val build_url : params -> string
 
-  val resource_url : key -> string
+  val build_query : params -> string
 
-  val resources_url : string
-
-  val string_of_filters : filters -> string
-
-  val deserializer : Yojson.Safe.json -> (fields, string) Result.result
-
-  val list_deserializer :
-    Yojson.Safe.json -> (fields list, string) Result.result
+  val of_json : Yojson.Basic.json -> (t, string) result
 end
 
 module Video = struct
-  type key = string
-
-  type fields =
+  type t =
     { id: int
     ; guid: string
     ; name: string
@@ -34,115 +21,169 @@ module Video = struct
     ; hd_url: string option
     ; length_seconds: int
     ; saved_time: string option }
-  [@@deriving yojson {strict= false}]
 
-  type fields_list = fields list [@@deriving yojson {strict= false}]
+  type params = string
 
-  type filters = {video_show: int option} [@@deriving fields]
+  let build_params guid = guid
 
-  let resource_url guid = "video/" ^ guid
+  let build_url guid = Printf.sprintf "video/%s/" guid
 
-  let resources_url = "videos"
+  let build_query _ = ""
 
-  let string_of_filters filters =
-    let acc_option to_s acc field =
-      match Fieldslib.Field.get field filters with
-      | None -> acc
-      | Some value ->
-          sprintf "%s:%s" (Fieldslib.Field.name field) (to_s value) :: acc
-    in
-    String.concat ","
-      (Fields_of_filters.fold ~init:[] ~video_show:(acc_option string_of_int))
+  let of_json_obj json =
+    let open Yojson.Basic.Util in
+    { id= member "id" json |> to_int
+    ; guid= member "guid" json |> to_string
+    ; name= member "name" json |> to_string
+    ; url= member "url" json |> to_string
+    ; low_url= member "low_url" json |> to_string_option
+    ; high_url= member "high_url" json |> to_string_option
+    ; hd_url= member "hd_url" json |> to_string_option
+    ; length_seconds= member "length_seconds" json |> to_int
+    ; saved_time= member "saved_time" json |> to_string_option }
 
-  let deserializer = fields_of_yojson
+  let of_json json =
+    let open Yojson.Basic.Util in
+    let results = member "results" json in
+    try Ok (of_json_obj results) with Type_error (s, _) -> Error s
+end
 
-  let list_deserializer = fields_list_of_yojson
+module Videos = struct
+  type t = Video.t list
+
+  type params = int * int option
+
+  let build_params limit video_show_id = (limit, video_show_id)
+
+  let build_url _ = "videos/"
+
+  let build_query = function
+    | limit, None -> Printf.sprintf "&limit=%d" limit
+    | limit, Some video_show_id ->
+        Printf.sprintf "&limit=%d&filter=video_show:%d" limit video_show_id
+
+  let of_json json =
+    let open Yojson.Basic.Util in
+    let accumulate_videos videos json = videos @ [Video.of_json_obj json] in
+    let results = member "results" json |> to_list in
+    try Ok (List.fold_left accumulate_videos [] results)
+    with Type_error (s, _) -> Error s
 end
 
 module VideoShow = struct
-  type key = string
+  type t = {id: int; guid: string; title: string}
 
-  type fields = {id: int; guid: string; title: string}
-  [@@deriving yojson {strict= false}]
+  type params = string
 
-  type fields_list = fields list [@@deriving yojson {strict= false}]
+  let build_params guid = guid
 
-  type filters = None
+  let build_url guid = Printf.sprintf "video_show/%s/" guid
 
-  let resource_url guid = "video_show/" ^ guid
+  let build_query _ = ""
 
-  let resources_url = "video_shows"
+  let of_json_obj json =
+    let open Yojson.Basic.Util in
+    { id= member "id" json |> to_int
+    ; guid= member "guid" json |> to_string
+    ; title= member "title" json |> to_string }
 
-  let string_of_filters _filters = ""
-
-  let deserializer = fields_of_yojson
-
-  let list_deserializer = fields_list_of_yojson
+  let of_json json =
+    let open Yojson.Basic.Util in
+    let results = member "results" json in
+    try Ok (of_json_obj results) with Type_error (s, _) -> Error s
 end
 
-module Api = struct
-  type 'a response = Ok of 'a | JsonError of string | HttpError of int
+module VideoShows = struct
+  type t = VideoShow.t list
 
-  let base = "https://www.giantbomb.com/api"
+  type params = int
+
+  let build_params limit = limit
+
+  let build_url _ = Printf.sprintf "video_shows"
+
+  let build_query limit = Printf.sprintf "&limit=%d" limit
+
+  let of_json json =
+    let open Yojson.Basic.Util in
+    let accumulate_video_shows video_shows json =
+      video_shows @ [VideoShow.of_json_obj json]
+    in
+    let results = member "results" json |> to_list in
+    try Ok (List.fold_left accumulate_video_shows [] results)
+    with Type_error (s, _) -> Error s
+end
+
+module SaveTime = struct
+  type t = unit
+
+  type params = int * int
+
+  let build_params video_id time_to_save = (video_id, time_to_save)
+
+  let build_url _ = "video/save-time/"
+
+  let build_query (video_id, time_to_save) =
+    Printf.sprintf "&video_id=%d&time_to_save=%d" video_id time_to_save
+
+  let of_json _json = Ok ()
+end
+
+module Response = struct
+  type 'a t = Ok of 'a | JsonError of string | HttpError of int
+
+  let return a = Ok a
+
+  let _json_error e = JsonError e
+
+  let http_error c = HttpError c
+
+  let bind resp f =
+    match resp with
+    | JsonError e -> JsonError e
+    | HttpError c -> HttpError c
+    | Ok a -> f a
+
+  let rbind f resp = bind resp f
+
+  let map resp f = bind resp (fun a -> return (f a))
+
+  let rmap f resp = map resp f
+end
+
+module Client (R : Resource) = struct
+  open Lwt.Infix
+
+  let base_url = "https://www.giantbomb.com/api"
+
+  let base_query api_key = Printf.sprintf "?api_key=%s&format=json" api_key
 
   let user_agent = "giantbomb-ocaml"
 
   let default_headers = Cohttp.Header.init_with "User-Agent" user_agent
 
-  type filters = {limit: int} [@@deriving fields]
-
-  let params_of_filters filters =
-    let acc to_s acc field =
-      let field_name = Fieldslib.Field.name field in
-      let field_value = Fieldslib.Field.get field filters in
-      (field_name, to_s field_value) :: acc
-    in
-    Fields_of_filters.fold ~init:[] ~limit:(acc string_of_int)
-
-  let send uri = Cohttp_lwt_unix.Client.get ~headers:default_headers uri
-
-  let query_string_of_list params =
-    let qjoin (k, v) = sprintf "%s=%s" k v in
-    let qstring = List.map qjoin params |> String.concat "&" in
-    match qstring with "" -> sprintf "" | _ -> sprintf "?%s" qstring
-
-  let response_of_yojson_result yjr =
-    match yjr with
-    | Result.Ok deserialized -> Ok deserialized
-    | Result.Error s -> JsonError s
-
-  let response_of_http_error code = HttpError code
-
-  let format_response deserializer resp =
+  let format_response resp =
     resp
     >>= fun (info, body) ->
     let code = info |> Cohttp.Response.status |> Cohttp.Code.code_of_status in
     if Cohttp.Code.is_success code then
-      body |> Cohttp_lwt.Body.to_string >|= Yojson.Safe.from_string
-      >|= Yojson.Safe.Util.member "results"
-      >|= deserializer >|= response_of_yojson_result
-    else Lwt.return (response_of_http_error code)
-end
+      body |> Cohttp_lwt.Body.to_string >|= Response.return
+    else Lwt.return (Response.http_error code)
 
-module Client (R : Resource) = struct
-  let get api_key key =
-    let base_params = [("api_key", api_key); ("format", "json")] in
-    let query_string = Api.query_string_of_list base_params in
-    sprintf "%s/%s/%s" Api.base (R.resource_url key) query_string
-    |> Uri.of_string |> Api.send
-    |> Api.format_response R.deserializer
-
-  let get_many api_filters resource_filters api_key =
-    let base_params = [("api_key", api_key); ("format", "json")] in
-    let api_params = Api.params_of_filters api_filters in
-    let resource_param = ("filter", R.string_of_filters resource_filters) in
-    let query_string =
-      Api.query_string_of_list ((resource_param :: base_params) @ api_params)
-    in
-    sprintf "%s/%s/%s" Api.base R.resources_url query_string
-    |> Uri.of_string |> Api.send
-    |> Api.format_response R.list_deserializer
+  let get api_key params =
+    let url = Printf.sprintf "%s/%s" base_url (R.build_url params) in
+    let query = base_query api_key ^ R.build_query params in
+    Uri.of_string (url ^ query)
+    |> Cohttp_lwt_unix.Client.get ~headers:default_headers
+    |> format_response
+    >|= Response.rmap Yojson.Basic.from_string
+    >|= Response.rmap R.of_json
+    >|= Response.rbind (fun resource ->
+            match resource with Ok r -> Ok r | Error e -> JsonError e )
 end
 
 module VideoClient = Client (Video)
+module VideosClient = Client (Videos)
 module VideoShowClient = Client (VideoShow)
+module VideoShowsClient = Client (VideoShows)
+module SaveTimeClient = Client (SaveTime)

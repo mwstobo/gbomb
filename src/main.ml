@@ -72,7 +72,7 @@ let rec save_stream st oc =
   | Some part -> output_string oc part ; save_stream st oc
 
 let download_video api_key video_id quality =
-  Giantbomb.VideoClient.get api_key video_id
+  Giantbomb.VideoClient.get api_key (Giantbomb.Video.build_params video_id)
   >>= fun video_result ->
   match video_result with
   | JsonError s ->
@@ -112,7 +112,7 @@ let rec print_videos video_opts =
       let watched =
         match video.Giantbomb.Video.saved_time with
         | None -> false
-        | Some t -> float_of_string t /. float_of_int length >= 0.98
+        | Some t -> float_of_string t /. float_of_int length >= 0.95
       in
       Format.printf "%s %s: %s (%dh %dm %ds)\n"
         (if watched then "w" else "-")
@@ -121,9 +121,8 @@ let rec print_videos video_opts =
       print_videos rest
 
 let list_videos api_key limit video_show =
-  let api_filters = {Giantbomb.Api.limit} in
-  let video_filters = {Giantbomb.Video.video_show} in
-  Giantbomb.VideoClient.get_many api_filters video_filters api_key
+  Giantbomb.VideosClient.get api_key
+    (Giantbomb.Videos.build_params limit video_show)
   >>= fun result ->
   match result with
   | JsonError s ->
@@ -143,9 +142,8 @@ let rec print_video_shows video_show_opts =
       print_video_shows rest
 
 let list_video_shows api_key limit =
-  let api_filters = {Giantbomb.Api.limit} in
-  let video_show_filters = Giantbomb.VideoShow.None in
-  Giantbomb.VideoShowClient.get_many api_filters video_show_filters api_key
+  Giantbomb.VideoShowsClient.get api_key
+    (Giantbomb.VideoShows.build_params limit)
   >>= fun result ->
   match result with
   | JsonError s ->

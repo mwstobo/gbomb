@@ -10,17 +10,17 @@
     "@opam/cohttp": "~2.0",
     "@opam/cohttp-lwt-unix": "~2.0",
     "@opam/yojson": "~1.5",
-    "@opam/ppx_deriving_yojson": ">=3.3 <3.4"
+    "@opam/sexplib": "v0.11.0"
   },
   "devDependencies": {
     "@opam/ocamlformat": "*",
     "@opam/merlin": "*",
+    "@opam/utop": "*",
     "@opam/qcheck": ">=0.9 <0.10",
     "@opam/qtest": ">=2.9 <2.10"
   },
   "scripts": {
-    "format": "dune build @fmt",
-    "promote": "dune promote",
+    "format": "dune build @fmt --auto-promote",
     "test": "dune runtest"
   },
   "esy": {
