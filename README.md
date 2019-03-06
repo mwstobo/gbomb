@@ -13,6 +13,7 @@ Note that you must have a Giant Bomb premium subscription to download videos. Ot
 ## Usage
 ```shell
 # Downloads a video at the specified quality
+# This will mark the video as watched
 $ gbomb download --quality [low|high|hd] VIDEO_ID
 
 # Prints the last the last n videos to stdout
@@ -23,6 +24,8 @@ $ gbomb list --limit n
 $ gbomb list --show 10
 # Get a list of shows
 $ gbomb shows --limit n
+# Manually mark a video as watched
+$ gbomb watched VIDEO_ID
 ```
 
 ## TODO
@@ -31,4 +34,4 @@ $ gbomb shows --limit n
 - [x] Add a show list command
 - [x] Add show filtering to videos command
 - [x] Add "watched" indicator to video list
-- [ ] Mark videos as watched upon download
+- [x] Mark videos as watched upon download

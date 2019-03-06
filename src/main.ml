@@ -3,8 +3,11 @@ type action =
   | Download of string * string
   | Videos of int * int option
   | VideoShows of int
+  | MarkWatched of string
 
 let ( >>= ) = Lwt.( >>= )
+
+let ( >|= ) = Lwt.( >|= )
 
 let create_download opts =
   match opts with
@@ -40,11 +43,17 @@ let create_video_show opts =
     | None -> Invalid )
   | _ -> VideoShows 10
 
+let create_mark_watched opts =
+  match opts with
+  | [Cli.Arg video_guid] -> MarkWatched video_guid
+  | _ -> Invalid
+
 let get_action opts =
   match opts with
   | Cli.Arg "download" :: opts -> create_download opts
   | Cli.Arg "videos" :: opts | Cli.Arg "list" :: opts -> create_videos opts
   | Cli.Arg "shows" :: opts -> create_video_show opts
+  | Cli.Arg "watched" :: opts -> create_mark_watched opts
   | _ -> Invalid
 
 let get_api_key =
@@ -89,7 +98,7 @@ let download_video api_key video_id quality =
         | _ -> video.Giantbomb.Video.low_url
       in
       match url_option with
-      | Some url ->
+      | Some url -> (
           let filename = video.Giantbomb.Video.url in
           let authed_url = url ^ "?api_key=" ^ api_key in
           let ua = Cohttp.Header.user_agent in
@@ -99,6 +108,22 @@ let download_video api_key video_id quality =
           let oc = open_out filename in
           print_endline ("Starting download of " ^ filename) ;
           save_stream (Cohttp_lwt.Body.to_stream body) oc
+          >>= fun () ->
+          Giantbomb.SaveTimeClient.get api_key
+            (Giantbomb.SaveTime.build_params video.Giantbomb.Video.id
+               video.Giantbomb.Video.length_seconds)
+          >|= fun save_result ->
+          match save_result with
+          | JsonError s ->
+              let err = "Failed to mark video as watched with error: " ^ s in
+              print_endline err
+          | HttpError c ->
+              let err =
+                "Failed to mark video as watched with HTTP code "
+                ^ string_of_int c
+              in
+              print_endline err
+          | Ok () -> print_endline "Sucessfully marked video as watched" )
       | None -> Lwt.return (print_endline "Specified quality not found!") )
 
 let rec print_videos video_opts =
@@ -154,6 +179,31 @@ let list_video_shows api_key limit =
       Lwt.return (print_endline err)
   | Ok video_shows -> Lwt.return (print_video_shows video_shows)
 
+
+let mark_watched api_key video_guid =
+  Giantbomb.VideoClient.get api_key (Giantbomb.Video.build_params video_guid)
+  >>= fun result ->
+    match result with
+  | JsonError s ->
+      let err = "Error parsing JSON response: " ^ s in
+      Lwt.return (print_endline err)
+  | HttpError c ->
+      let err = "Error making HTTP request with code: " ^ string_of_int c in
+      Lwt.return (print_endline err)
+  | Ok video ->
+      let video_id = video.Giantbomb.Video.id in
+      let length = video.Giantbomb.Video.length_seconds in
+      Giantbomb.SaveTimeClient.get api_key (Giantbomb.SaveTime.build_params video_id length)
+      >>= fun result ->
+        match result with
+      | JsonError s ->
+          let err = "Error parsing JSON response: " ^ s in
+          Lwt.return (print_endline err)
+      | HttpError c ->
+          let err = "Error making HTTP request with code: " ^ string_of_int c in
+          Lwt.return (print_endline err)
+      | Ok () -> Lwt.return (print_endline "Success!")
+
 let () =
   let args = Array.sub Sys.argv 1 (Array.length Sys.argv - 1) in
   let opts = Cli.parse_options (Array.to_list args) in
@@ -168,4 +218,5 @@ let () =
       | Videos (limit, video_show) ->
           Lwt_main.run (list_videos api_key limit video_show)
       | VideoShows limit -> Lwt_main.run (list_video_shows api_key limit)
+      | MarkWatched video_guid -> Lwt_main.run (mark_watched api_key video_guid)
       | _ -> print_endline "Invalid action!" )
