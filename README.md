@@ -22,8 +22,10 @@ $ gbomb videos --limit n
 $ gbomb list --limit n
 # Filter by show id
 $ gbomb list --show 10
+
 # Get a list of shows
 $ gbomb shows --limit n
+
 # Manually mark a video as watched
 $ gbomb watched VIDEO_ID
 ```
