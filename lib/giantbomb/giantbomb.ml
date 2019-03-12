@@ -1,15 +1,3 @@
-module type Resource = sig
-  type t
-
-  type params
-
-  val build_url : params -> string
-
-  val build_query : params -> string
-
-  val of_json : Yojson.Basic.json -> (t, string) result
-end
-
 module Video = struct
   type t =
     { id: int
@@ -21,14 +9,6 @@ module Video = struct
     ; hd_url: string option
     ; length_seconds: int
     ; saved_time: string option }
-
-  type params = string
-
-  let build_params guid = guid
-
-  let build_url guid = Printf.sprintf "video/%s/" guid
-
-  let build_query _ = ""
 
   let of_json_obj json =
     let open Yojson.Basic.Util in
@@ -51,17 +31,6 @@ end
 module Videos = struct
   type t = Video.t list
 
-  type params = int * int option
-
-  let build_params limit video_show_id = (limit, video_show_id)
-
-  let build_url _ = "videos/"
-
-  let build_query = function
-    | limit, None -> Printf.sprintf "&limit=%d" limit
-    | limit, Some video_show_id ->
-        Printf.sprintf "&limit=%d&filter=video_show:%d" limit video_show_id
-
   let of_json json =
     let open Yojson.Basic.Util in
     let accumulate_videos videos json = videos @ [Video.of_json_obj json] in
@@ -72,14 +41,6 @@ end
 
 module VideoShow = struct
   type t = {id: int; guid: string; title: string}
-
-  type params = string
-
-  let build_params guid = guid
-
-  let build_url guid = Printf.sprintf "video_show/%s/" guid
-
-  let build_query _ = ""
 
   let of_json_obj json =
     let open Yojson.Basic.Util in
@@ -96,14 +57,6 @@ end
 module VideoShows = struct
   type t = VideoShow.t list
 
-  type params = int
-
-  let build_params limit = limit
-
-  let build_url _ = Printf.sprintf "video_shows"
-
-  let build_query limit = Printf.sprintf "&limit=%d" limit
-
   let of_json json =
     let open Yojson.Basic.Util in
     let accumulate_video_shows video_shows json =
@@ -116,15 +69,6 @@ end
 
 module SaveTime = struct
   type t = unit
-
-  type params = int * int
-
-  let build_params video_id time_to_save = (video_id, time_to_save)
-
-  let build_url _ = "video/save-time/"
-
-  let build_query (video_id, time_to_save) =
-    Printf.sprintf "&video_id=%d&time_to_save=%d" video_id time_to_save
 
   let of_json _json = Ok ()
 end
@@ -151,8 +95,43 @@ module Response = struct
   let rmap f resp = map resp f
 end
 
-module Client (R : Resource) = struct
+module Client = struct
   open Lwt.Infix
+
+  type 'a request =
+    | VideoRequest : string -> Video.t request
+    | VideosRequest : int * int option -> Videos.t request
+    | VideoShowRequest : string -> VideoShow.t request
+    | VideoShowsRequest : int -> VideoShows.t request
+    | SaveTimeRequest : int * int -> SaveTime.t request
+
+  let build_url (type el) (request : el request) =
+    match request with
+    | VideoRequest guid -> Printf.sprintf "video/%s/" guid
+    | VideosRequest _ -> "videos/"
+    | VideoShowRequest guid -> Printf.sprintf "video_show/%s/" guid
+    | VideoShowsRequest _ -> Printf.sprintf "video_shows/"
+    | SaveTimeRequest _ -> "video/save-time/"
+
+  let build_query (type el) (request : el request) =
+    match request with
+    | VideoRequest _ -> ""
+    | VideosRequest (limit, None) -> Printf.sprintf "&limit=%d" limit
+    | VideosRequest (limit, Some video_show_id) ->
+        Printf.sprintf "&limit=%d&filter=video_show:%d" limit video_show_id
+    | VideoShowRequest _ -> ""
+    | VideoShowsRequest limit -> Printf.sprintf "&limit=%d" limit
+    | SaveTimeRequest (video_id, time_to_save) ->
+        Printf.sprintf "&video_id=%d&time_to_save=%d" video_id time_to_save
+
+  let of_json (type el) (request : el request) :
+      Yojson.Basic.json -> (el, string) result =
+    match request with
+    | VideoRequest _ -> Video.of_json
+    | VideosRequest _ -> Videos.of_json
+    | VideoShowRequest _ -> VideoShow.of_json
+    | VideoShowsRequest _ -> VideoShows.of_json
+    | SaveTimeRequest _ -> SaveTime.of_json
 
   let base_url = "https://www.giantbomb.com/api"
 
@@ -170,20 +149,14 @@ module Client (R : Resource) = struct
       body |> Cohttp_lwt.Body.to_string >|= Response.return
     else Lwt.return (Response.http_error code)
 
-  let get api_key params =
-    let url = Printf.sprintf "%s/%s" base_url (R.build_url params) in
-    let query = base_query api_key ^ R.build_query params in
+  let get api_key request =
+    let url = Printf.sprintf "%s/%s" base_url (build_url request) in
+    let query = base_query api_key ^ build_query request in
     Uri.of_string (url ^ query)
     |> Cohttp_lwt_unix.Client.get ~headers:default_headers
     |> format_response
     >|= Response.rmap Yojson.Basic.from_string
-    >|= Response.rmap R.of_json
+    >|= Response.rmap (of_json request)
     >|= Response.rbind (fun resource ->
             match resource with Ok r -> Ok r | Error e -> JsonError e )
 end
-
-module VideoClient = Client (Video)
-module VideosClient = Client (Videos)
-module VideoShowClient = Client (VideoShow)
-module VideoShowsClient = Client (VideoShows)
-module SaveTimeClient = Client (SaveTime)

@@ -81,7 +81,7 @@ let rec save_stream st oc =
   | Some part -> output_string oc part ; save_stream st oc
 
 let download_video api_key video_id quality =
-  Giantbomb.VideoClient.get api_key (Giantbomb.Video.build_params video_id)
+  Giantbomb.Client.get api_key (Giantbomb.Client.VideoRequest video_id)
   >>= fun video_result ->
   match video_result with
   | JsonError s ->
@@ -109,9 +109,9 @@ let download_video api_key video_id quality =
           print_endline ("Starting download of " ^ filename) ;
           save_stream (Cohttp_lwt.Body.to_stream body) oc
           >>= fun () ->
-          Giantbomb.SaveTimeClient.get api_key
-            (Giantbomb.SaveTime.build_params video.Giantbomb.Video.id
-               video.Giantbomb.Video.length_seconds)
+          Giantbomb.Client.get api_key
+            (Giantbomb.Client.SaveTimeRequest
+               (video.Giantbomb.Video.id, video.Giantbomb.Video.length_seconds))
           >|= fun save_result ->
           match save_result with
           | JsonError s ->
@@ -146,8 +146,8 @@ let rec print_videos video_opts =
       print_videos rest
 
 let list_videos api_key limit video_show =
-  Giantbomb.VideosClient.get api_key
-    (Giantbomb.Videos.build_params limit video_show)
+  Giantbomb.Client.get api_key
+    (Giantbomb.Client.VideosRequest (limit, video_show))
   >>= fun result ->
   match result with
   | JsonError s ->
@@ -167,8 +167,7 @@ let rec print_video_shows video_show_opts =
       print_video_shows rest
 
 let list_video_shows api_key limit =
-  Giantbomb.VideoShowsClient.get api_key
-    (Giantbomb.VideoShows.build_params limit)
+  Giantbomb.Client.get api_key (Giantbomb.Client.VideoShowsRequest limit)
   >>= fun result ->
   match result with
   | JsonError s ->
@@ -179,30 +178,32 @@ let list_video_shows api_key limit =
       Lwt.return (print_endline err)
   | Ok video_shows -> Lwt.return (print_video_shows video_shows)
 
-
 let mark_watched api_key video_guid =
-  Giantbomb.VideoClient.get api_key (Giantbomb.Video.build_params video_guid)
+  Giantbomb.Client.get api_key (Giantbomb.Client.VideoRequest video_guid)
   >>= fun result ->
-    match result with
+  match result with
   | JsonError s ->
       let err = "Error parsing JSON response: " ^ s in
       Lwt.return (print_endline err)
   | HttpError c ->
       let err = "Error making HTTP request with code: " ^ string_of_int c in
       Lwt.return (print_endline err)
-  | Ok video ->
+  | Ok video -> (
       let video_id = video.Giantbomb.Video.id in
       let length = video.Giantbomb.Video.length_seconds in
-      Giantbomb.SaveTimeClient.get api_key (Giantbomb.SaveTime.build_params video_id length)
+      Giantbomb.Client.get api_key
+        (Giantbomb.Client.SaveTimeRequest (video_id, length))
       >>= fun result ->
-        match result with
+      match result with
       | JsonError s ->
           let err = "Error parsing JSON response: " ^ s in
           Lwt.return (print_endline err)
       | HttpError c ->
-          let err = "Error making HTTP request with code: " ^ string_of_int c in
+          let err =
+            "Error making HTTP request with code: " ^ string_of_int c
+          in
           Lwt.return (print_endline err)
-      | Ok () -> Lwt.return (print_endline "Success!")
+      | Ok () -> Lwt.return (print_endline "Success!") )
 
 let () =
   let args = Array.sub Sys.argv 1 (Array.length Sys.argv - 1) in
@@ -218,5 +219,6 @@ let () =
       | Videos (limit, video_show) ->
           Lwt_main.run (list_videos api_key limit video_show)
       | VideoShows limit -> Lwt_main.run (list_video_shows api_key limit)
-      | MarkWatched video_guid -> Lwt_main.run (mark_watched api_key video_guid)
+      | MarkWatched video_guid ->
+          Lwt_main.run (mark_watched api_key video_guid)
       | _ -> print_endline "Invalid action!" )
