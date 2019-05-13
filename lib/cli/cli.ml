@@ -48,15 +48,21 @@ let get_string_type opt =
 *)
 let rec parse_options options =
   match options with
-  | [] -> []
+  | [] ->
+      []
   | [opt] -> (
     match get_string_type opt with
-    | Just arg -> [Arg arg]
-    | Dash flag -> [Flag flag] )
+    | Just arg ->
+        [Arg arg]
+    | Dash flag ->
+        [Flag flag] )
   | opt :: second :: options -> (
     match get_string_type opt with
-    | Just arg -> Arg arg :: parse_options (second :: options)
+    | Just arg ->
+        Arg arg :: parse_options (second :: options)
     | Dash dash -> (
       match get_string_type second with
-      | Just param_val -> Param (dash, param_val) :: parse_options options
-      | _ -> Flag dash :: parse_options (second :: options) ) )
+      | Just param_val ->
+          Param (dash, param_val) :: parse_options options
+      | _ ->
+          Flag dash :: parse_options (second :: options) ) )
