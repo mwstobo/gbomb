@@ -125,7 +125,7 @@ module Client = struct
         Printf.sprintf "&video_id=%d&time_to_save=%d" video_id time_to_save
 
   let of_json (type el) (request : el request) :
-      Yojson.Basic.json -> (el, string) result =
+      Yojson.Basic.t -> (el, string) result =
     match request with
     | VideoRequest _ -> Video.of_json
     | VideosRequest _ -> Videos.of_json
