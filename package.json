@@ -3,8 +3,8 @@
   "description": "Giant Bomb command line client",
   "version": "0.1.0",
   "dependencies": {
-    "ocaml": "~4.07",
-    "@opam/dune": "~1.9",
+    "ocaml": "~4.08",
+    "@opam/dune": "~1.10",
     "@opam/lwt": "~4.2",
     "@opam/lwt_ssl": "~1.1",
     "@opam/cohttp": "~2.1",
